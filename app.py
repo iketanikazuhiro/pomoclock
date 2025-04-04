@@ -3,20 +3,20 @@ import streamlit.components.v1 as components
 
 st.set_page_config(page_title="Pomodoro Timer", layout="centered")
 
-# Streamlitのデフォルトヘッダーを非表示にし、背景色を統一
+# Streamlitのデフォルトヘッダーを非表示にし、背景色を濃いグレーに統一
 st.markdown(
     """
     <style>
       header {visibility: hidden;}
       .stApp {
-          background-color: #f0f0f0;
+          background-color: #808080;
       }
       :fullscreen, :-webkit-full-screen {
-          background-color: #f0f0f0;
+          background-color: #808080;
       }
       body {
           margin: 0;
-          background-color: #f0f0f0;
+          background-color: #808080;
           font-family: sans-serif;
       }
     </style>
@@ -30,7 +30,7 @@ html_code = """
   <style>
     body {
       margin: 0;
-      background-color: #f0f0f0; /* 全体背景：明るめグレー */
+      background-color: #808080; /* 濃いグレー */
       font-family: sans-serif;
       display: flex;
       align-items: center;
@@ -41,7 +41,7 @@ html_code = """
       text-align: center;
     }
     canvas {
-      background-color: #f0f0f0;
+      background-color: #808080;
       border: none;
     }
     /* キャンバスとボタンの間に1行分の余白 */
@@ -74,7 +74,7 @@ html_code = """
       <button id="soundtest-btn" onclick="playSoundTest()">SoundTest</button>
     </div>
   </div>
-  <!-- alert-sound: 使用する音源のURLは必要に応じて変更してください -->
+  <!-- alert-sound: サウンドは任意のURLに変更可能 -->
   <audio id="alert-sound" src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg" preload="auto"></audio>
   <script>
     // タイマー状態変数
@@ -86,8 +86,9 @@ html_code = """
     var ctx = canvas.getContext("2d");
 
     // 色の設定
-    var workColor = "#0D47A1"; // タイマー開始後、作業セグメント（0～25分、30～55分）用の紺色
-    var defaultColor = "#000000"; // 初期状態および休憩セグメント用の黒
+    var workColor = "#1565C0";    // タイマー開始後、作業セグメント (0～25分、30～55分) の色（穏やかな青）
+    var breakColor = "#404040";   // 休憩セグメント (25～30分、55～60分) の色（背景と黒の中間）
+    var defaultColor = "#404040"; // 初期状態は全セグメントは breakColor（休憩ゾーン色）に統一
 
     // 時計描画関数
     function drawClock() {
@@ -122,10 +123,10 @@ html_code = """
       ctx.strokeStyle = timerStarted ? workColor : defaultColor;
       ctx.stroke();
 
-      // 休憩セグメント1：25～30分（常に黒）
+      // 休憩セグメント1：25～30分（常にbreakColor）
       ctx.beginPath();
       ctx.arc(0, 0, effectiveRadius, minuteToAngle(25), minuteToAngle(30), false);
-      ctx.strokeStyle = defaultColor;
+      ctx.strokeStyle = breakColor;
       ctx.stroke();
 
       // 作業セグメント2：30～55分
@@ -134,10 +135,10 @@ html_code = """
       ctx.strokeStyle = timerStarted ? workColor : defaultColor;
       ctx.stroke();
 
-      // 休憩セグメント2：55～60分（常に黒）
+      // 休憩セグメント2：55～60分（常にbreakColor）
       ctx.beginPath();
       ctx.arc(0, 0, effectiveRadius, minuteToAngle(55), minuteToAngle(60), false);
-      ctx.strokeStyle = defaultColor;
+      ctx.strokeStyle = breakColor;
       ctx.stroke();
 
       // 現在の経過時間に応じた分針の描画
@@ -168,7 +169,7 @@ html_code = """
       drawClock();
     }
 
-    // STARTボタンを押すと、タイマー開始と同時にサウンドを再生
+    // STARTボタン：タイマーをゼロから開始し、サウンドを再生
     function startTimer() {
       elapsedSeconds = 0;
       timerStarted = true;
@@ -178,7 +179,7 @@ html_code = """
       document.getElementById("alert-sound").play();
     }
 
-    // FullScreenボタンのトグル処理
+    // FullScreenボタン
     function toggleFullScreen() {
       if(!document.fullscreenElement) {
         document.documentElement.requestFullscreen();
@@ -187,7 +188,7 @@ html_code = """
       }
     }
 
-    // SoundTestボタンの処理
+    // SoundTestボタン
     function playSoundTest() {
       document.getElementById("alert-sound").play();
     }
