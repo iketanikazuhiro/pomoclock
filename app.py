@@ -11,6 +11,15 @@ st.markdown(
       .stApp {
           background-color: #f0f0f0;
       }
+      body {
+          margin: 0;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          height: 100vh;
+          background-color: #f0f0f0;
+          font-family: sans-serif;
+      }
     </style>
     """,
     unsafe_allow_html=True,
@@ -20,28 +29,23 @@ html_code = """
 <html>
 <head>
   <style>
-    body {
-      margin: 0;
-      background-color: #f0f0f0; /* 全体背景：明るめグレー */
-      font-family: sans-serif;
+    /* コンテナ：時計とボタンを中央に配置 */
+    #clock-container {
       display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
-      height: 100vh;
-    }
-    #clock-container {
-      text-align: center;
     }
     canvas {
       background-color: #f0f0f0;
       border: none;
     }
-    /* キャンバスとボタンの間に1行分の余白 */
+    /* キャンバスとボタンの間に1行分の余白（必要なら調整） */
     #spacer {
       height: 1em;
     }
+    /* ボタンコンテナ：横並びで中央揃え */
     #button-container {
-      margin-top: 0.5em;
       display: flex;
       justify-content: center;
       gap: 1em;
@@ -50,6 +54,10 @@ html_code = """
       padding: 8px 16px;
       font-size: 1em;
       cursor: pointer;
+      background: none;
+      border: none;
+      outline: none;
+      /* 下線は各ボタンごとに個別で設定（JSで動的に変更） */
     }
   </style>
 </head>
@@ -58,26 +66,25 @@ html_code = """
     <canvas id="clock" width="350" height="350"></canvas>
     <div id="spacer"></div>
     <div id="button-container">
-      <button id="start-btn" onclick="startTimer()">START</button>
+      <button id="start-btn" onclick="startTimer()" style="text-decoration: underline;">START</button>
       <button id="fs-btn" onclick="toggleFullScreen()">FullScreen</button>
       <button id="soundtest-btn" onclick="playSoundTest()">SoundTest</button>
     </div>
   </div>
-  <audio id="alert-sound" src="https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg" preload="auto"></audio>
+  <!-- 音源：ここでは穏やかなbeep_short.oggを使用 -->
+  <audio id="alert-sound" src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg" preload="auto"></audio>
   <script>
-    // タイマー状態変数
     var elapsedSeconds = 0;
     var timerInterval = null;
-    var timerStarted = false;  // STARTを押すまで false
+    var timerStarted = false;
 
     var canvas = document.getElementById("clock");
     var ctx = canvas.getContext("2d");
 
-    // 色の設定
-    var workColor = "#0D47A1"; // START後の作業セグメント（0～25分）の紺色
-    var defaultColor = "#000000"; // 初期状態は全て黒
+    // 色設定
+    var workColor = "#0D47A1"; // START後、作業セグメント0～25分に使用する紺色
+    var defaultColor = "#000000"; // 初期状態およびその他は黒
 
-    // 時計描画関数
     function drawClock() {
       // 全画面の場合、キャンバスサイズをウィンドウ幅の50%に調整
       if(document.fullscreenElement) {
@@ -97,7 +104,6 @@ html_code = """
       ctx.save();
       ctx.translate(width/2, height/2);
 
-      // 分を角度に変換する関数（0分＝上、-90°）
       function minuteToAngle(min) {
         return (min * 6) * Math.PI / 180 - Math.PI/2;
       }
@@ -107,7 +113,6 @@ html_code = """
       // 作業セグメント1：0～25分
       ctx.beginPath();
       ctx.arc(0, 0, effectiveRadius, minuteToAngle(0), minuteToAngle(25), false);
-      // タイマー開始済みなら作業セグメントを紺色、それ以外は黒
       ctx.strokeStyle = timerStarted ? workColor : defaultColor;
       ctx.stroke();
 
@@ -129,8 +134,8 @@ html_code = """
       ctx.strokeStyle = defaultColor;
       ctx.stroke();
 
-      // 現在の経過時間に合わせた分針の描画
-      var cycleSeconds = 3600; // 1サイクル＝60分
+      // 現在の経過時間に応じた分針の描画
+      var cycleSeconds = 3600;
       var t = elapsedSeconds % cycleSeconds;
       var minutes = t / 60;
       var angle = minuteToAngle(minutes);
@@ -151,16 +156,14 @@ html_code = """
       ctx.restore();
     }
 
-    // タイマー更新
     function updateTimer() {
       elapsedSeconds++;
-      // 各節目到来時にサウンドアラートを鳴らす例（ここでは0～25分の開始のみ）
-      // ※ 実装例：例えば25分に差し掛かったときに再生など、必要に応じて条件を調整してください
-      // if(elapsedSeconds == 25*60) { document.getElementById("alert-sound").play(); }
       drawClock();
+      // セグメントの節目でサウンドを鳴らす例（必要に応じて条件設定）
+      // 例：START後25分の境目
+      // if(elapsedSeconds == 25 * 60) { document.getElementById("alert-sound").play(); }
     }
 
-    // STARTボタン：タイマーをゼロから開始し、タイマー状態を変更
     function startTimer() {
       elapsedSeconds = 0;
       timerStarted = true;
@@ -169,7 +172,6 @@ html_code = """
       drawClock();
     }
 
-    // FullScreenボタン
     function toggleFullScreen() {
       if(!document.fullscreenElement) {
         document.documentElement.requestFullscreen();
@@ -178,15 +180,11 @@ html_code = """
       }
     }
 
-    // SoundTestボタン
     function playSoundTest() {
       document.getElementById("alert-sound").play();
     }
 
-    // ウィンドウサイズ変更で再描画
     window.addEventListener("resize", drawClock);
-
-    // 初期描画
     drawClock();
   </script>
 </body>
