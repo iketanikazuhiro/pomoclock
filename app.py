@@ -1,9 +1,9 @@
 import streamlit as st
 import streamlit.components.v1 as components
 
-st.set_page_config(page_title="140字書いて投稿するFocusScribe", layout="wide")
+st.set_page_config(page_title="Pomodoro Clock", layout="centered")
 
-# Streamlit全体の背景色をグレーに設定するCSS
+# Streamlit全体の背景を設定
 st.markdown(
     """
     <style>
@@ -21,176 +21,108 @@ html_code = """
   <style>
     body {
       margin: 0;
-      overflow: hidden;
-      background-color: #f0f0f0; /* 明るめのグレー */
-      font-family: sans-serif;
-    }
-    /* コンテナは画面全体を占め、中央揃え */
-    #editor-container {
-      width: 100%;
-      height: 100vh;
+      background-color: #f0f0f0; /* 背景：明るめのグレー */
       display: flex;
-      flex-direction: column;
-      align-items: center;
       justify-content: center;
+      align-items: center;
+      height: 100vh;
     }
-    /* アプリタイトル（FocusScribe）：入力欄の上部に配置 */
-    #app-title {
-      font-size: 2em;
-      color: #555;
-      margin-bottom: 0.5em;
-    }
-    /* テキストエリア：横22.5%、縦25vh */
-    #editor {
-      width: 22.5%;
-      height: 25vh;
-      font-size: 1.2em;
-      line-height: 1.5em;
-      padding: 1em;
-      border: none;
-      resize: none;
-      overflow: auto;
+    canvas {
       background-color: #f0f0f0;
-    }
-    #editor:focus {
-      outline: none;
-      box-shadow: none;
-    }
-    /* ボタンコンテナ：入力欄と同じ幅、等間隔に中央揃え */
-    #button-container {
-      width: 22.5%;
-      margin-top: 0.5em;
-      display: flex;
-      justify-content: space-evenly;
-    }
-    /* STARTボタン（全画面切替用）：初期状態は下線付き */
-    #fullscreen-btn {
-      padding: 0.5em 1em;
-      font-size: 1em;
-      background: none;
-      border: none;
-      color: #555;
-      cursor: pointer;
-      text-decoration: underline;
-    }
-    /* POSTおよびCLEARボタン：下線なし */
-    #share-btn, #clear-btn {
-      padding: 0.5em 1em;
-      font-size: 1em;
-      cursor: pointer;
-      background: none;
-      border: none;
-      color: #555;
-      text-decoration: none;
-    }
-    /* 残り文字数表示：ボタン列の下に配置 */
-    #char-count {
-      margin-top: 2em;
-      font-size: 1em;
-      color: #555;
-    }
-    /* モバイル向けの調整 */
-    @media (max-width: 600px) {
-      #editor {
-        width: 90%;
-        height: 20vh;
-      }
-      #button-container {
-        width: 90%;
-      }
+      /* 枠線など不要なら削除 */
     }
   </style>
 </head>
 <body>
-  <div id="editor-container">
-    <div id="app-title">FocusScribe</div>
-    <textarea id="editor"></textarea>
-    <div id="button-container">
-      <button id="fullscreen-btn" onclick="toggleFullScreen()">START</button>
-      <button id="share-btn" onclick="shareToTwitter()">POST</button>
-      <button id="clear-btn" onclick="clearEditor()">CLEAR</button>
-    </div>
-    <div id="char-count">あと 140 字</div>
-  </div>
+  <canvas id="clock" width="300" height="300"></canvas>
   <script>
-    const editor = document.getElementById("editor");
-    const charCount = document.getElementById("char-count");
-    const fullscreenBtn = document.getElementById("fullscreen-btn");
-    const shareBtn = document.getElementById("share-btn");
-    const appTitle = document.getElementById("app-title");
-    const maxChars = 140;
-    
-    // 初期状態設定：STARTボタンに下線付き
-    fullscreenBtn.style.textDecoration = "underline";
-    
-    // 残り文字数を更新する関数
-    function updateCharCount() {
-      const count = editor.value.length;
-      const remaining = maxChars - count;
-      if (remaining >= 0) {
-        charCount.textContent = "あと " + remaining + " 字";
-        charCount.style.color = "#555";
-      } else {
-        charCount.textContent = "+ " + (-remaining) + " 字";
-        charCount.style.color = "red";
-      }
-    }
-    
-    // 入力イベントで文字カウント更新と自動スクロール
-    editor.addEventListener("input", function() {
-      updateCharCount();
-      let height = editor.clientHeight;
-      editor.scrollTop = editor.scrollHeight - height;
-    });
-    
-    // ツイッターへのシェア処理
-    function shareToTwitter() {
-      let text = editor.value;
-      if (!text) {
-        alert("投稿するテキストが空です。");
-        return;
-      }
-      let twitterUrl = "https://twitter.com/intent/tweet?text=" + encodeURIComponent(text);
-      window.open(twitterUrl, "_blank");
-    }
-    
-    // CLEARボタンで入力欄をクリアする処理
-    function clearEditor() {
-      editor.value = "";
-      updateCharCount();
-    }
-    
-    // 全画面切替処理
-    function toggleFullScreen() {
-      if (!document.fullscreenElement) {
-        document.documentElement.requestFullscreen();
-      } else {
-        if (document.exitFullscreen) {
-          document.exitFullscreen();
+    // 時計の描画処理
+    function drawClock() {
+      var canvas = document.getElementById("clock");
+      if (canvas.getContext) {
+        var ctx = canvas.getContext("2d");
+        var width = canvas.width;
+        var height = canvas.height;
+        var radius = width / 2;
+        // 中心に移動
+        ctx.translate(radius, radius);
+        radius = radius * 0.90;
+        
+        // 背景をクリア
+        ctx.clearRect(-canvas.width/2, -canvas.height/2, canvas.width, canvas.height);
+        
+        // 外周の白い円（時計のベース）
+        ctx.beginPath();
+        ctx.arc(0, 0, radius, 0, 2 * Math.PI);
+        ctx.fillStyle = "#ffffff";
+        ctx.fill();
+        
+        // 関数：分を角度（ラジアン）に変換
+        // 時計では0分が上（-90°）になるよう調整
+        function minuteToAngle(min) {
+          return (min * 6) * Math.PI / 180 - Math.PI/2;
         }
+        
+        // セグメントを描画
+        // 作業セグメント：緑系（例：#a0d468）、休憩セグメント：赤系（例：#ed5565）
+        
+        // 作業1：0～25分
+        ctx.beginPath();
+        ctx.arc(0, 0, radius, minuteToAngle(0), minuteToAngle(25), false);
+        ctx.lineWidth = 15;
+        ctx.strokeStyle = "#a0d468";
+        ctx.stroke();
+        
+        // 休憩1：25～30分
+        ctx.beginPath();
+        ctx.arc(0, 0, radius, minuteToAngle(25), minuteToAngle(30), false);
+        ctx.strokeStyle = "#ed5565";
+        ctx.stroke();
+        
+        // 作業2：30～55分
+        ctx.beginPath();
+        ctx.arc(0, 0, radius, minuteToAngle(30), minuteToAngle(55), false);
+        ctx.strokeStyle = "#a0d468";
+        ctx.stroke();
+        
+        // 休憩2：55～60分
+        ctx.beginPath();
+        ctx.arc(0, 0, radius, minuteToAngle(55), minuteToAngle(60), false);
+        ctx.strokeStyle = "#ed5565";
+        ctx.stroke();
+        
+        // 現在の時刻の分針を描画
+        var now = new Date();
+        // 分と秒を考慮して、現在の分を小数で計算
+        var min = now.getMinutes() + now.getSeconds() / 60;
+        var angle = minuteToAngle(min);
+        
+        // 分針の描画（長さはradiusの80%）
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(radius * 0.8 * Math.cos(angle), radius * 0.8 * Math.sin(angle));
+        ctx.lineWidth = 6;
+        ctx.strokeStyle = "#555";
+        ctx.stroke();
+        
+        // 中心の小さなドット
+        ctx.beginPath();
+        ctx.arc(0, 0, 5, 0, 2 * Math.PI);
+        ctx.fillStyle = "#555";
+        ctx.fill();
+        
+        // 毎回translateでずれないようにリセット
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
       }
     }
     
-    // 全画面状態の変化に合わせたボタンとタイトルの表示更新
-    document.addEventListener("fullscreenchange", () => {
-      if (document.fullscreenElement) {
-        fullscreenBtn.textContent = "OFF";
-        fullscreenBtn.style.textDecoration = "none";
-        shareBtn.style.textDecoration = "underline";
-        appTitle.style.display = "none";
-        editor.focus();
-      } else {
-        fullscreenBtn.textContent = "START";
-        fullscreenBtn.style.textDecoration = "underline";
-        shareBtn.style.textDecoration = "none";
-        appTitle.style.display = "block";
-      }
-    });
-    
-    updateCharCount();
+    // 初回描画
+    drawClock();
+    // 1秒ごとに更新
+    setInterval(drawClock, 1000);
   </script>
 </body>
 </html>
 """
 
-components.html(html_code, height=600)
+components.html(html_code, height=350)
