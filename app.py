@@ -3,20 +3,20 @@ import streamlit.components.v1 as components
 
 st.set_page_config(page_title="Pomodoro Timer", layout="centered")
 
-# Streamlitのデフォルトヘッダーを非表示にし、背景色を濃いグレーに統一
+# Streamlitのデフォルトヘッダーを非表示にし、背景色を明るいグレーに統一
 st.markdown(
     """
     <style>
       header {visibility: hidden;}
       .stApp {
-          background-color: #808080;
+          background-color: #f0f0f0;
       }
       :fullscreen, :-webkit-full-screen {
-          background-color: #808080;
+          background-color: #f0f0f0;
       }
       body {
           margin: 0;
-          background-color: #808080;
+          background-color: #f0f0f0;
           font-family: sans-serif;
       }
     </style>
@@ -30,7 +30,7 @@ html_code = """
   <style>
     body {
       margin: 0;
-      background-color: #808080; /* 濃いグレー */
+      background-color: #f0f0f0; /* 元の明るいグレー */
       font-family: sans-serif;
       display: flex;
       align-items: center;
@@ -41,7 +41,7 @@ html_code = """
       text-align: center;
     }
     canvas {
-      background-color: #808080;
+      background-color: #f0f0f0;
       border: none;
     }
     /* キャンバスとボタンの間に1行分の余白 */
@@ -88,7 +88,7 @@ html_code = """
     // 色の設定
     var workColor = "#1565C0";    // タイマー開始後、作業セグメント (0～25分、30～55分) の色（穏やかな青）
     var breakColor = "#404040";   // 休憩セグメント (25～30分、55～60分) の色（背景と黒の中間）
-    var defaultColor = "#404040"; // 初期状態は全セグメントは breakColor（休憩ゾーン色）に統一
+    var defaultColor = breakColor; // 初期状態は全セグメントは breakColor に統一
 
     // 時計描画関数
     function drawClock() {
