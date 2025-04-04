@@ -11,12 +11,11 @@ st.markdown(
       .stApp {
           background-color: #f0f0f0;
       }
+      :fullscreen, :-webkit-full-screen {
+          background-color: #f0f0f0;
+      }
       body {
           margin: 0;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          height: 100vh;
           background-color: #f0f0f0;
           font-family: sans-serif;
       }
@@ -29,23 +28,28 @@ html_code = """
 <html>
 <head>
   <style>
-    /* コンテナ：時計とボタンを中央に配置 */
-    #clock-container {
+    body {
+      margin: 0;
+      background-color: #f0f0f0; /* 全体背景：明るめグレー */
+      font-family: sans-serif;
       display: flex;
-      flex-direction: column;
       align-items: center;
       justify-content: center;
+      height: 100vh;
+    }
+    #clock-container {
+      text-align: center;
     }
     canvas {
       background-color: #f0f0f0;
       border: none;
     }
-    /* キャンバスとボタンの間に1行分の余白（必要なら調整） */
+    /* キャンバスとボタンの間に1行分の余白 */
     #spacer {
       height: 1em;
     }
-    /* ボタンコンテナ：横並びで中央揃え */
     #button-container {
+      margin-top: 0.5em;
       display: flex;
       justify-content: center;
       gap: 1em;
@@ -57,7 +61,6 @@ html_code = """
       background: none;
       border: none;
       outline: none;
-      /* 下線は各ボタンごとに個別で設定（JSで動的に変更） */
     }
   </style>
 </head>
@@ -71,9 +74,10 @@ html_code = """
       <button id="soundtest-btn" onclick="playSoundTest()">SoundTest</button>
     </div>
   </div>
-  <!-- 音源：ここでは穏やかなbeep_short.oggを使用 -->
+  <!-- alert-sound: 使用する音源のURLは必要に応じて変更してください -->
   <audio id="alert-sound" src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg" preload="auto"></audio>
   <script>
+    // タイマー状態変数
     var elapsedSeconds = 0;
     var timerInterval = null;
     var timerStarted = false;
@@ -81,10 +85,11 @@ html_code = """
     var canvas = document.getElementById("clock");
     var ctx = canvas.getContext("2d");
 
-    // 色設定
-    var workColor = "#0D47A1"; // START後、作業セグメント0～25分に使用する紺色
-    var defaultColor = "#000000"; // 初期状態およびその他は黒
+    // 色の設定
+    var workColor = "#0D47A1"; // タイマー開始後、作業セグメント（0～25分、30～55分）用の紺色
+    var defaultColor = "#000000"; // 初期状態および休憩セグメント用の黒
 
+    // 時計描画関数
     function drawClock() {
       // 全画面の場合、キャンバスサイズをウィンドウ幅の50%に調整
       if(document.fullscreenElement) {
@@ -104,6 +109,7 @@ html_code = """
       ctx.save();
       ctx.translate(width/2, height/2);
 
+      // 分を角度に変換する関数（0分＝上、-90°）
       function minuteToAngle(min) {
         return (min * 6) * Math.PI / 180 - Math.PI/2;
       }
@@ -116,7 +122,7 @@ html_code = """
       ctx.strokeStyle = timerStarted ? workColor : defaultColor;
       ctx.stroke();
 
-      // 休憩セグメント1：25～30分
+      // 休憩セグメント1：25～30分（常に黒）
       ctx.beginPath();
       ctx.arc(0, 0, effectiveRadius, minuteToAngle(25), minuteToAngle(30), false);
       ctx.strokeStyle = defaultColor;
@@ -125,10 +131,10 @@ html_code = """
       // 作業セグメント2：30～55分
       ctx.beginPath();
       ctx.arc(0, 0, effectiveRadius, minuteToAngle(30), minuteToAngle(55), false);
-      ctx.strokeStyle = defaultColor;
+      ctx.strokeStyle = timerStarted ? workColor : defaultColor;
       ctx.stroke();
 
-      // 休憩セグメント2：55～60分
+      // 休憩セグメント2：55～60分（常に黒）
       ctx.beginPath();
       ctx.arc(0, 0, effectiveRadius, minuteToAngle(55), minuteToAngle(60), false);
       ctx.strokeStyle = defaultColor;
@@ -156,22 +162,23 @@ html_code = """
       ctx.restore();
     }
 
+    // タイマー更新関数
     function updateTimer() {
       elapsedSeconds++;
       drawClock();
-      // セグメントの節目でサウンドを鳴らす例（必要に応じて条件設定）
-      // 例：START後25分の境目
-      // if(elapsedSeconds == 25 * 60) { document.getElementById("alert-sound").play(); }
     }
 
+    // STARTボタンを押すと、タイマー開始と同時にサウンドを再生
     function startTimer() {
       elapsedSeconds = 0;
       timerStarted = true;
       if(timerInterval) { clearInterval(timerInterval); }
       timerInterval = setInterval(updateTimer, 1000);
       drawClock();
+      document.getElementById("alert-sound").play();
     }
 
+    // FullScreenボタンのトグル処理
     function toggleFullScreen() {
       if(!document.fullscreenElement) {
         document.documentElement.requestFullscreen();
@@ -180,6 +187,7 @@ html_code = """
       }
     }
 
+    // SoundTestボタンの処理
     function playSoundTest() {
       document.getElementById("alert-sound").play();
     }
