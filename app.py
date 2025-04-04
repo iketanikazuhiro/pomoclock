@@ -1,15 +1,13 @@
 import streamlit as st
 import streamlit.components.v1 as components
 
-st.set_page_config(page_title="Pomodoro Clock", layout="centered")
+st.set_page_config(page_title="Pomodoro Timer", layout="centered")
 
-# Streamlit全体の背景を設定
+# ヘッダーなどStreamlitデフォルトの上部エリアを非表示にするCSS
 st.markdown(
     """
     <style>
-    .stApp {
-        background-color: #f0f0f0;
-    }
+    header {visibility: hidden;}
     </style>
     """,
     unsafe_allow_html=True,
@@ -21,108 +19,161 @@ html_code = """
   <style>
     body {
       margin: 0;
-      background-color: #f0f0f0; /* 背景：明るめのグレー */
+      background-color: #f0f0f0; /* 明るめグレー */
+      font-family: sans-serif;
       display: flex;
-      justify-content: center;
       align-items: center;
+      justify-content: center;
       height: 100vh;
+    }
+    #clock-container {
+      text-align: center;
     }
     canvas {
       background-color: #f0f0f0;
-      /* 枠線など不要なら削除 */
+      border: none;
+    }
+    #button-container {
+      margin-top: 10px;
+    }
+    button {
+      padding: 8px 16px;
+      margin: 0 10px;
+      font-size: 1em;
+      cursor: pointer;
     }
   </style>
 </head>
 <body>
-  <canvas id="clock" width="300" height="300"></canvas>
+  <div id="clock-container">
+    <canvas id="clock" width="300" height="300"></canvas>
+    <div id="button-container">
+      <button id="start-btn" onclick="startTimer()">START</button>
+      <button id="fs-btn" onclick="toggleFullScreen()">FullScreen</button>
+    </div>
+  </div>
   <script>
-    // 時計の描画処理
+    // タイマー変数
+    var elapsedSeconds = 0;
+    var timerInterval = null;
+    
+    // キャンバス取得とコンテキスト
+    var canvas = document.getElementById("clock");
+    var ctx = canvas.getContext("2d");
+    
+    // 色の設定
+    var workColor = "#1E88E5"; // 明るい紺色（作業セグメント）
+    var breakColor = "#000000"; // 黒（休憩セグメント）
+    
+    // 時計描画関数（タイマーに合わせて描画）
     function drawClock() {
-      var canvas = document.getElementById("clock");
-      if (canvas.getContext) {
-        var ctx = canvas.getContext("2d");
-        var width = canvas.width;
-        var height = canvas.height;
-        var radius = width / 2;
-        // 中心に移動
-        ctx.translate(radius, radius);
-        radius = radius * 0.90;
-        
-        // 背景をクリア
-        ctx.clearRect(-canvas.width/2, -canvas.height/2, canvas.width, canvas.height);
-        
-        // 外周の白い円（時計のベース）
-        ctx.beginPath();
-        ctx.arc(0, 0, radius, 0, 2 * Math.PI);
-        ctx.fillStyle = "#ffffff";
-        ctx.fill();
-        
-        // 関数：分を角度（ラジアン）に変換
-        // 時計では0分が上（-90°）になるよう調整
-        function minuteToAngle(min) {
-          return (min * 6) * Math.PI / 180 - Math.PI/2;
+      // 全画面時はキャンバスサイズを調整
+      if(document.fullscreenElement) {
+        canvas.width = window.innerWidth * 0.5;
+        canvas.height = window.innerWidth * 0.5;
+      } else {
+        canvas.width = 300;
+        canvas.height = 300;
+      }
+      var width = canvas.width;
+      var height = canvas.height;
+      var radius = Math.min(width, height) / 2;
+      
+      // 描画前にクリア
+      ctx.clearRect(0, 0, width, height);
+      ctx.save();
+      ctx.translate(width/2, height/2);
+      
+      // 現在の経過時間を1サイクル（60分＝3600秒）に対して計算
+      var cycleSeconds = 3600;
+      var t = elapsedSeconds % cycleSeconds;
+      var minutes = t / 60;
+      
+      // 分を角度に変換する関数（0分が上部＝-90°）
+      function minuteToAngle(min) {
+        return (min * 6) * Math.PI / 180 - Math.PI/2;
+      }
+      
+      // セグメント描画
+      ctx.lineWidth = radius * 0.15;
+      
+      // 作業セグメント1：0～25分（明るい紺）
+      ctx.beginPath();
+      ctx.arc(0, 0, radius, minuteToAngle(0), minuteToAngle(25), false);
+      ctx.strokeStyle = workColor;
+      ctx.stroke();
+      
+      // 休憩セグメント1：25～30分（黒）
+      ctx.beginPath();
+      ctx.arc(0, 0, radius, minuteToAngle(25), minuteToAngle(30), false);
+      ctx.strokeStyle = breakColor;
+      ctx.stroke();
+      
+      // 作業セグメント2：30～55分（明るい紺）
+      ctx.beginPath();
+      ctx.arc(0, 0, radius, minuteToAngle(30), minuteToAngle(55), false);
+      ctx.strokeStyle = workColor;
+      ctx.stroke();
+      
+      // 休憩セグメント2：55～60分（黒）
+      ctx.beginPath();
+      ctx.arc(0, 0, radius, minuteToAngle(55), minuteToAngle(60), false);
+      ctx.strokeStyle = breakColor;
+      ctx.stroke();
+      
+      // 現在の経過時間を示す分針の描画
+      var angle = minuteToAngle(minutes);
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(radius * 0.8 * Math.cos(angle), radius * 0.8 * Math.sin(angle));
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = "#555";
+      ctx.stroke();
+      
+      // 中心ドット
+      ctx.beginPath();
+      ctx.arc(0, 0, 5, 0, 2 * Math.PI);
+      ctx.fillStyle = "#555";
+      ctx.fill();
+      
+      ctx.restore();
+    }
+    
+    // タイマー更新関数（1秒ごとに呼ばれる）
+    function updateTimer() {
+      elapsedSeconds++;
+      drawClock();
+    }
+    
+    // STARTボタン押下時：タイマーをリセットしてスタート
+    function startTimer() {
+      elapsedSeconds = 0;
+      if(timerInterval) {
+        clearInterval(timerInterval);
+      }
+      timerInterval = setInterval(updateTimer, 1000);
+      drawClock();
+    }
+    
+    // FullScreenボタンのトグル処理
+    function toggleFullScreen() {
+      if(!document.fullscreenElement) {
+        document.documentElement.requestFullscreen();
+      } else {
+        if(document.exitFullscreen) {
+          document.exitFullscreen();
         }
-        
-        // セグメントを描画
-        // 作業セグメント：緑系（例：#a0d468）、休憩セグメント：赤系（例：#ed5565）
-        
-        // 作業1：0～25分
-        ctx.beginPath();
-        ctx.arc(0, 0, radius, minuteToAngle(0), minuteToAngle(25), false);
-        ctx.lineWidth = 15;
-        ctx.strokeStyle = "#a0d468";
-        ctx.stroke();
-        
-        // 休憩1：25～30分
-        ctx.beginPath();
-        ctx.arc(0, 0, radius, minuteToAngle(25), minuteToAngle(30), false);
-        ctx.strokeStyle = "#ed5565";
-        ctx.stroke();
-        
-        // 作業2：30～55分
-        ctx.beginPath();
-        ctx.arc(0, 0, radius, minuteToAngle(30), minuteToAngle(55), false);
-        ctx.strokeStyle = "#a0d468";
-        ctx.stroke();
-        
-        // 休憩2：55～60分
-        ctx.beginPath();
-        ctx.arc(0, 0, radius, minuteToAngle(55), minuteToAngle(60), false);
-        ctx.strokeStyle = "#ed5565";
-        ctx.stroke();
-        
-        // 現在の時刻の分針を描画
-        var now = new Date();
-        // 分と秒を考慮して、現在の分を小数で計算
-        var min = now.getMinutes() + now.getSeconds() / 60;
-        var angle = minuteToAngle(min);
-        
-        // 分針の描画（長さはradiusの80%）
-        ctx.beginPath();
-        ctx.moveTo(0, 0);
-        ctx.lineTo(radius * 0.8 * Math.cos(angle), radius * 0.8 * Math.sin(angle));
-        ctx.lineWidth = 6;
-        ctx.strokeStyle = "#555";
-        ctx.stroke();
-        
-        // 中心の小さなドット
-        ctx.beginPath();
-        ctx.arc(0, 0, 5, 0, 2 * Math.PI);
-        ctx.fillStyle = "#555";
-        ctx.fill();
-        
-        // 毎回translateでずれないようにリセット
-        ctx.setTransform(1, 0, 0, 1, 0, 0);
       }
     }
     
-    // 初回描画
+    // ウィンドウサイズ変更時に再描画
+    window.addEventListener("resize", drawClock);
+    
+    // 初期描画
     drawClock();
-    // 1秒ごとに更新
-    setInterval(drawClock, 1000);
   </script>
 </body>
 </html>
 """
 
-components.html(html_code, height=350)
+components.html(html_code, height=600)
